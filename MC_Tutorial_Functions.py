@@ -2244,7 +2244,7 @@ def megasim_varyonlypatch(moves, std, mval, initial_angle, anneal_steps, m_sims,
     # Convert the list of shapes to a DataFrame for storage
     shapeframe = pd.DataFrame(shapelist)
     title = "shapeframe"
-    path = os.path.join(os.getcwd(), "Simulation results")  # Define the file path for saving results
+    path = os.getcwd()  # Define the file path for saving results
     filename = os.path.join(path, title + ".csv")
     shapeframe.to_csv(filename)  # Save the shapes DataFrame as a CSV file
 
@@ -2573,7 +2573,7 @@ def save_mainframe(mainframe,title):
     '''
 
     mainframe_serialized = mainframe.applymap(serialize_complex_data) #serialize the data
-    path = os.path.join(os.getcwd(),'Simulation Results') #Identify the filepath
+    path = os.getcwd() #Identify the filepath
     filename = os.path.join(path, title + ".csv") # Save the DataFrame to Excel
     os.makedirs(path, exist_ok=True) # Ensure that the directory exists
     mainframe_serialized.to_csv(filename)
