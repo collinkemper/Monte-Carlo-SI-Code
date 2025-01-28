@@ -1325,30 +1325,45 @@ def min_cluster_centers_experimental(dataset, clusternumber, final_e, experiment
     # Ensure the fixed centroid remains unchanged
     clustercenters[0, :] = fixed_centroid[0, :]
 
-    # Generate plots if requested
+    # Visualization based on the specified `Plots` dimension
     if Plots == '1D':
-        # 1D plot of centroids
+        # 1D plot of cluster centers and their corresponding energies
         plt.figure()
-        plt.scatter(clustercenters[:, 0], clustercenters[:, 1], s=100, marker='o', c='red', edgecolor='black', label='centroids')
+        plt.scatter(
+            km.cluster_centers_[:, 0], 
+            km.cluster_centers_[:, 1], 
+            color='#08d1f9', s=120, alpha=0.8, 
+            edgecolors='black', linewidth=1, zorder=0
+        )
         plt.xlabel('Hinge Angle')
         plt.ylabel('Energy')
         plt.grid()
         plt.show(block=True)
 
     elif Plots == '2D':
-        # 2D plot of centroids
+        # 2D plot of cluster centroids on the x-y plane
         plt.figure()
-        plt.scatter(clustercenters[:, 0], clustercenters[:, 1], s=100, marker='o', c='red', edgecolor='black', label='centroids')
+        plt.scatter(
+            km.cluster_centers_[:, 0], 
+            km.cluster_centers_[:, 1], 
+            color='#08d1f9', s=120, alpha=0.8, 
+            edgecolors='black', linewidth=1, zorder=0
+        )
         plt.xlabel('Angle 1')
         plt.ylabel('Angle 2')
         plt.grid()
         plt.show(block=True)
 
     elif Plots == '3D':
-        # 3D plot of centroids
+        # 3D plot of cluster centroids on a Cartesian grid
         fig = plt.figure()
         ax = fig.add_subplot(projection='3d')
-        ax.scatter(clustercenters[:, 0], clustercenters[:, 2], clustercenters[:, 1], color='red')
+        ax.scatter(
+            km.cluster_centers_[:, 0], 
+            km.cluster_centers_[:, 2], 
+            color='#08d1f9', s=120, alpha=0.8, 
+            edgecolors='black', linewidth=1, zorder=0
+        )
         ax.set_xlabel('Angle 1')
         ax.set_ylabel('Angle 3')
         ax.set_zlabel('Angle 2')
@@ -1513,9 +1528,12 @@ def cluster_stats(data, clusternumber, clustercenters, clusterlabels, final_e, p
         plt.xlabel('Final Energy (kT)', fontsize=8)
 
         # Add a color bar to indicate energy scale
+        #sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+        #sm.set_array([])
+        #plt.colorbar(sm, label='Final Energy (kT)')
         sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
-        sm.set_array([])
-        plt.colorbar(sm, label='Final Energy (kT)')
+        sm.set_array(energies)  # Associate the ScalarMappable with the energies array
+        cbar = plt.colorbar(sm, ax=plt.gca(), label='Final Energy (kT)')  # Explicitly associate colorbar with the current axis
 
         # Enhance plot aesthetics with borders
         for spine in plt.gca().spines.values():
@@ -2244,7 +2262,7 @@ def megasim_varyonlypatch(moves, std, mval, initial_angle, anneal_steps, m_sims,
     # Convert the list of shapes to a DataFrame for storage
     shapeframe = pd.DataFrame(shapelist)
     title = "shapeframe"
-    path = os.getcwd()  # Define the file path for saving results
+    path = os.path.join(os.getcwd(), "Simulation results")  # Define the file path for saving results
     filename = os.path.join(path, title + ".csv")
     shapeframe.to_csv(filename)  # Save the shapes DataFrame as a CSV file
 
@@ -2572,8 +2590,9 @@ def save_mainframe(mainframe,title):
         filename: the entire filename (including the path)
     '''
 
-    mainframe_serialized = mainframe.applymap(serialize_complex_data) #serialize the data
-    path = os.getcwd() #Identify the filepath
+    #mainframe_serialized = mainframe.applymap(serialize_complex_data) #serialize the data
+    mainframe_serialized = mainframe.map(deserialize_complex_data) #serialize it
+    path = os.path.join(os.getcwd()) #Identify the filepath
     filename = os.path.join(path, title + ".csv") # Save the DataFrame to Excel
     os.makedirs(path, exist_ok=True) # Ensure that the directory exists
     mainframe_serialized.to_csv(filename)
@@ -3523,7 +3542,8 @@ def load_mainframe(filename):
         mainframe: pandas dataframe holding all folding data from megasims
     '''
     mainframe_serialized = pd.read_csv(filename,index_col=0) #read in the data
-    mainframe = mainframe_serialized.applymap(deserialize_complex_data) #serialize it
+    #mainframe = mainframe_serialized.applymap(deserialize_complex_data) #serialize it
+    mainframe = mainframe_serialized.map(deserialize_complex_data) #serialize it
 
     return mainframe
 
@@ -3790,8 +3810,8 @@ def fit_length_data(av_df, std_df, length_list, log_slope=0):
     )
     plt.xlabel('Ln(Chain Length)', fontname='Helvetica')  # X-axis label
     plt.ylabel('Ln(Rg [µm])')  # Y-axis label
-    plt.xticks([0, 1, 2, 3, 4], fontname='Helvetica')  # X-axis ticks
-    plt.xlim([0, 4.3])  # X-axis limits
+    plt.xticks(range(0,int(np.round(np.max(log_length_list),0)+1)), fontname='Helvetica')  # X-axis ticks
+    plt.xlim([0, np.round(np.max(log_length_list),0)+0.5])  # X-axis limits
     # plt.legend(loc='best')  # Legend placement (commented out)
     plt.show()
 
@@ -3815,10 +3835,11 @@ def fit_length_data(av_df, std_df, length_list, log_slope=0):
     plt.figure()
     plt.errorbar(
         np.power(length_list, log_slope), Rg_vals, Rg_stds, fmt='o',
-        capsize=5, color='b', label='Simulation Data'
+        color='black', ecolor='black', markerfacecolor='#08d1f9', markeredgecolor='black',
+        markersize=8, capsize=5, label='Simulation Data', zorder = 1
     )
     plt.plot(
-        exp_x ** log_slope, exp_y, linestyle='--', color='g', label='Best Fit'
+        exp_x ** log_slope, exp_y, linestyle='--', color='#f1910c', linewidth=3, zorder=0, label='Best Fit'
     )
     plt.xlabel('Sequence Length$^{{{}}}$'.format(round(log_slope, 3)))  # X-axis label
     plt.ylabel('Radius of Gyration (µm)')  # Y-axis label
@@ -3951,8 +3972,8 @@ def find_degree_fit(reduced_df):
         )
 
     # Add plot labels and legend
-    plt.xlabel('x')  # Label for x-axis
-    plt.ylabel('y')  # Label for y-axis
+    plt.xlabel('Hinges')  # Label for x-axis
+    plt.ylabel(r'$\frac{Rg}{Chain Length^{3/4}}$', rotation=90, fontsize=20)  # Y-axis label
     plt.legend(fontsize=12)  # Add a legend with font size 12
     plt.show()  # Display the plot
 
@@ -4013,6 +4034,8 @@ def fitandscaledata(reduced_df, stds, degree):
         markersize=8,  # Marker size
         capsize=5  # Error bar cap size
     )  # Plot data points with error bars
+    plt.xlabel('Hinges')  # Label for x-axis
+    plt.ylabel(r'$\frac{Rg}{Chain Length^{3/4}}$', rotation=90, fontsize=20)  # Y-axis label
     plt.legend()  # Add a legend to the plot
     plt.show()  # Display the plot
 
@@ -4204,6 +4227,8 @@ def lengthhingenormRg_vs_triangles(av_df, std_df, shape_list, sterr_df):
     # Customize the font size for ticks
     plt.xticks(fontsize=10)
     plt.yticks(fontsize=10)
+    plt.xlabel('Triangle Composition (%)', fontsize = 12)
+    plt.ylabel('Normalized Rg', fontsize = 12)
 
     # Set the linewidth for the plot spines (axes borders)
     ax = plt.gca()  # Get the current Axes instance
@@ -4430,6 +4455,8 @@ def lengthhingenormRg_vs_weakmags(av_df, std_df, sterr_df, patches_list):
     # Aesthetic adjustments for the plot
     plt.xticks(fontsize=10)
     plt.yticks(fontsize=10)
+    plt.xlabel('Number of Weaker Magnetic Patches', fontsize = 12)
+    plt.ylabel('Normalized Rg', fontsize = 12)
 
     # Adjust the spine (border) thickness
     ax = plt.gca()  # Get the current Axes instance
@@ -4476,6 +4503,8 @@ def plot_mags(mag_dict):
     # Adjust the font size for the x and y axis tick labels
     plt.xticks(fontsize=10)
     plt.yticks(fontsize=10)
+    plt.xlabel('Number of Weaker Magnetic Patches', fontsize = 12)
+    plt.ylabel('Normalized Rg', fontsize = 12)
 
     # Add a legend showing the magnitude categories (keys of `mag_dict`)
     plt.legend(mag_dict.keys())
@@ -4499,82 +4528,109 @@ def filter_df(length_list, analyzed_mainframe):
 
 def Rg_histograms(filtered_length0, log_slope, log_intercept, fit):
     """
-    Generates and visualizes histograms of radius of gyration (Rg) metrics using various normalization approaches.
+    Generates and visualizes histograms for normalized radius of gyration (Rg) data 
+    based on various normalization schemes, including length, length fits, and hinge counts.
 
     Parameters:
-    - filtered_length0: DataFrame containing structural data, including 'dRg', 'length', and 'clusternumber'.
-    - log_slope: Slope of the log-log fit used for normalization.
-    - log_intercept: Intercept of the log-log fit used for normalization.
-    - fit: Function to apply hinge-based normalization.
+    ----------
+    filtered_length0 : pandas.DataFrame
+        A DataFrame containing microrobot data. Expected columns:
+        - 'dRg': List or array of Rg values for each sample.
+        - 'clusternumber': Number of samples or clusters per row.
+        - 'length': Length values of the microrobots.
+        - 'hinges': Lists representing hinges per microrobot.
 
-    Displays:
-    - Four histograms visualizing different Rg metrics:
-      1. Total Rg normalized by sequence length.
-      2. Rg divided by sequence length.
-      3. Rg normalized using a length-based fit.
-      4. Rg normalized using both length and hinge corrections.
+    log_slope : float
+        The slope of the logarithmic fit used for normalizing Rg with respect to length.
+
+    log_intercept : float
+        The intercept of the logarithmic fit used for normalizing Rg with respect to length.
+
+    fit : callable
+        A function that takes an array of hinge counts and outputs a scaling factor for 
+        normalizing Rg based on the number of hinges.
+
+    Returns:
+    -------
+    None
+        Displays four histograms:
+        1. Total dRg values.
+        2. dRg/length values.
+        3. dRg values normalized to length using the logarithmic fit.
+        4. dRg values normalized to both length and hinge counts.
     """
+    # Import necessary library
+    import copy
+    import numpy as np
+    import matplotlib.pyplot as plt
 
-    # Create a deep copy of the filtered_length DataFrame to avoid modifying the original data
+    # Deep copy of the input DataFrame to avoid modifying the original data
     filtered_length = copy.deepcopy(filtered_length0)
 
-    # Extract 'dRg' column and initialize arrays for Rg values and cluster counts
+    # Extract the 'dRg' column as a frame of arrays
     frame = filtered_length.loc[:, 'dRg']
-    Rg_vec = np.zeros(0)  # Array to store concatenated Rg values
-    number = []  # List to store the number of clusters per sequence
 
-    # Loop through the sequences to concatenate 'dRg' values and collect cluster counts
+    # Initialize an empty vector for storing all Rg values
+    Rg_vec = np.zeros(0)
+    number = []  # List to store the number of samples (clusters) per row
+
+    # Combine all Rg arrays into a single vector and count clusters
     for i in range(len(frame)):
-        Rg_vec = np.hstack((Rg_vec, np.array(frame[i])))
+        Rg_vec = np.hstack((Rg_vec, np.array(frame[i])))  # Concatenate Rg values
         number.append(filtered_length.loc[:, 'clusternumber'][i])
 
-    # Extract sequence lengths and hinge counts
+    # Extract lengths and compute the number of hinges for each row
     lengths = filtered_length.loc[:, 'length'].to_numpy()
     hinges = filtered_length.loc[:, 'hinges'].apply(lambda x: len(x)).to_numpy()
 
-    # Repeat lengths and hinges to match the total number of clusters
+    # Expand lengths and hinges to match the number of samples per row
     length_vec = np.repeat(lengths, number)
     hinges_vec = np.repeat(hinges, number)
 
-    # Apply normalization factors
-    length_fit_norm = length_vec / (log_intercept * length_vec**log_slope)  # Length normalization
-    length_hinge_norm = length_vec / (log_intercept * length_vec**log_slope) / fit(hinges_vec)  # Length + hinge normalization
+    # Normalize lengths using the logarithmic fit
+    length_fit_norm = length_vec / (log_intercept * length_vec**log_slope)
+    # Further normalize by the scaling factor based on hinges
+    length_hinge_norm = length_vec / (log_intercept * length_vec**log_slope) / fit(hinges_vec)
 
-    # Compute normalized Rg metrics
+    # Compute normalized Rg values
     Rg_length_fit_norm = Rg_vec * length_fit_norm
     Rg_length_hinge_norm = Rg_vec * length_hinge_norm
-    Rg_total = Rg_vec * length_vec
+    Rg_total = Rg_vec * length_vec  # Total Rg scaled by length
 
-    # Plot histogram of the total Rg normalized by length
+    # Plot histogram of total Rg
     plt.figure(figsize=(10, 8))
     bin_edges = np.histogram_bin_edges(Rg_total, bins='auto')
     plt.hist(Rg_total, bins=bin_edges, edgecolor='black', color='#51c1bf', linewidth=1)
     plt.tick_params(axis='both', which='major', labelsize=15)
-    plt.title('Total dRg')
+    plt.xlabel('Total dRg', fontsize = 12)
+    plt.ylabel('Frequency',fontsize = 12)
     plt.show()
 
-    # Plot histogram of Rg divided by sequence length
+    # Plot histogram of Rg/length values
     plt.figure(figsize=(10, 8))
     bin_edges = np.histogram_bin_edges(Rg_vec, bins='auto')
     plt.hist(Rg_vec, bins=bin_edges, edgecolor='black', color='#51c1bf', linewidth=1)
     plt.tick_params(axis='both', which='major', labelsize=15)
-    plt.title('dRg/Length')
+    plt.xlabel('dRg/Length', fontsize = 12)
+    plt.ylabel('Frequency',fontsize = 12)
     plt.show()
 
-    # Plot histogram of Rg normalized to the length fit
+    # Plot histogram of Rg normalized to length using the logarithmic fit
     plt.figure(figsize=(10, 8))
     bin_edges = np.histogram_bin_edges(Rg_length_fit_norm, bins='auto')
     plt.hist(Rg_length_fit_norm, bins=bin_edges, edgecolor='black', color='#51c1bf', linewidth=1)
     plt.tick_params(axis='both', which='major', labelsize=15)
-    plt.title('dRg Normalized to Length Fit')
+    plt.xlabel('dRg Normalized to Length Fit', fontsize = 12)
+    plt.ylabel('Frequency',fontsize = 12)
     plt.show()
 
-    # Plot histogram of Rg normalized to both length and hinges
+    # Plot histogram of Rg normalized to both length and hinge counts
     plt.figure(figsize=(10, 8))
     bin_edges = np.histogram_bin_edges(Rg_length_hinge_norm, bins='auto')
     plt.hist(Rg_length_hinge_norm, bins=bin_edges, edgecolor='black', color='#51c1bf', linewidth=1)
     plt.tick_params(axis='both', which='major', labelsize=15)
-    plt.title('Rg normalized to length and hinges')
+    plt.xlabel('Rg Normalized to Length and Hinges', fontsize = 12)
+    plt.ylabel('Frequency',fontsize = 12)
     plt.show()
 
 def show_unique_structures(hingenum, shapes, clustercenters, sequence_name, high_probs, high, parameter):
@@ -4776,7 +4832,8 @@ def sym_histogram(filtered_length):
     plt.xlim([0.7, 1])
 
     # Set the title of the plot
-    plt.title('Symmetry')
+    plt.xlabel('Symmetry', fontsize = 12)
+    plt.ylabel('Frequency',fontsize = 12)
 
     # Display the plot
     plt.show()
@@ -4817,7 +4874,8 @@ def T_histogram(filtered_length):
     plt.tick_params(axis='both', which='major', labelsize=15)
 
     # Set the title of the plot
-    plt.title('Tortuosity')
+    plt.xlabel('Tortuosity', fontsize = 12)
+    plt.ylabel('Frequency',fontsize = 12)
 
     # Display the plot
     plt.show()
